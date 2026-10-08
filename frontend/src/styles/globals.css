@@ -1,0 +1,320 @@
+@import './variables.css';
+@import './layout.css';
+@import './pages.css';
+
+* {
+  box-sizing: border-box;
+}
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #9cc5ff;
+  outline-offset: 2px;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+.app-shell {
+  min-height: 100vh;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid #e9edf2;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.eyebrow {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+}
+.muted-copy {
+  color: var(--muted);
+}
+.icon-plain {
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  color: #7d8793;
+}
+.icon-plain:hover {
+  color: var(--ink);
+}
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.primary-button {
+  background: var(--blue);
+  color: white;
+}
+.primary-button:hover {
+  background: var(--blue-dark);
+}
+.primary-button:disabled {
+  background: #bcd6fa;
+}
+.secondary-button {
+  background: #e9edf2;
+  color: #273342;
+}
+.secondary-button:hover {
+  background: #dce3eb;
+}
+.loading-card,
+.empty-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.avatar {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  user-select: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+.avatar--xs {
+  width: 29px;
+  height: 29px;
+  font-size: 10px;
+}
+.avatar--sm {
+  width: 38px;
+  height: 38px;
+  font-size: 12px;
+}
+.avatar--md {
+  width: 43px;
+  height: 43px;
+  font-size: 13px;
+}
+.avatar--lg {
+  width: 55px;
+  height: 55px;
+  font-size: 17px;
+}
+.avatar--xl {
+  width: 78px;
+  height: 78px;
+  font-size: 23px;
+}
+.avatar--xxl {
+  width: 168px;
+  height: 168px;
+  font-size: 48px;
+}
+.avatar--violet {
+  background: linear-gradient(135deg, #7649d9, #b783ec 62%, #e6acf1);
+}
+.avatar--rose {
+  background: linear-gradient(135deg, #d94e77, #fb9d9c 68%, #ffd4ba);
+}
+.avatar--teal {
+  background: linear-gradient(135deg, #047b8c, #49baac 65%, #bdecc8);
+}
+.avatar--amber {
+  background: linear-gradient(135deg, #dc7a28, #f5bb60 65%, #fae2a0);
+}
+.avatar--blue {
+  background: linear-gradient(135deg, #2866c3, #6ea2e5 70%, #b6ddf0);
+}
+.avatar--pink {
+  background: linear-gradient(135deg, #ad4b9e, #e293c9 65%, #f2cee4);
+}
+.avatar--indigo {
+  background: linear-gradient(135deg, #404fac, #898edc 65%, #c6bfe9);
+}
+.avatar__online {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  background: #29bf63;
+  border: 2px solid white;
+  border-radius: 50%;
+}
+.avatar--lg .avatar__online {
+  width: 14px;
+  height: 14px;
+}
+
+.media-art {
+  position: relative;
+  width: 100%;
+  min-height: 340px;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(180deg, #f9c39e 0%, #e88889 45%, #64558b 100%);
+}
+.media-art--compact {
+  min-height: 100%;
+  height: 100%;
+}
+.media-art__sun {
+  position: absolute;
+  width: 31%;
+  aspect-ratio: 1;
+  top: 14%;
+  left: 50%;
+  border-radius: 50%;
+  background: rgba(255, 239, 174, 0.9);
+  box-shadow: 0 0 80px 30px rgba(255, 194, 135, 0.42);
+}
+.media-art__hill {
+  position: absolute;
+  width: 135%;
+  height: 48%;
+  left: -15%;
+  border-radius: 50% 50% 0 0;
+  transform: rotate(-10deg);
+}
+.media-art__hill--back {
+  bottom: -12%;
+  background: #695474;
+}
+.media-art__hill--front {
+  bottom: -31%;
+  left: -3%;
+  background: #2f415a;
+  transform: rotate(9deg);
+}
+.media-art__spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 15px white;
+}
+.media-art__spark--one {
+  left: 20%;
+  top: 31%;
+}
+.media-art__spark--two {
+  right: 20%;
+  top: 17%;
+}
+.media-art__caption {
+  position: absolute;
+  bottom: 22px;
+  left: 28px;
+  max-width: calc(100% - 55px);
+  color: white;
+  font-size: clamp(19px, 3vw, 31px);
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+  font-weight: 800;
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.35);
+}
+.media-art--mountain {
+  background: linear-gradient(180deg, #afdae4 0%, #c1d8d4 42%, #657d81 100%);
+}
+.media-art--mountain .media-art__sun {
+  left: 20%;
+  top: 12%;
+  width: 20%;
+  background: #f6eed6;
+  box-shadow: 0 0 80px 20px rgba(255, 255, 255, 0.6);
+}
+.media-art--mountain .media-art__hill--back {
+  bottom: -2%;
+  background: #72989b;
+  border-radius: 27% 73% 0 0;
+  transform: rotate(-17deg);
+}
+.media-art--mountain .media-art__hill--front {
+  bottom: -22%;
+  background: #274d5b;
+  border-radius: 62% 38% 0 0;
+}
+.media-art--lavender {
+  background: linear-gradient(145deg, #e6b3d4, #9c8bd2 60%, #6556a3);
+}
+.media-art--lavender .media-art__sun {
+  width: 45%;
+  left: 11%;
+  top: 17%;
+  background: rgba(255, 223, 237, 0.42);
+  box-shadow: 0 0 80px 20px rgba(255, 255, 255, 0.3);
+}
+.media-art--lavender .media-art__hill--back {
+  background: #9a72b5;
+}
+.media-art--lavender .media-art__hill--front {
+  background: #5d4b91;
+}
+.media-art--forest {
+  background: linear-gradient(160deg, #c6e4b8, #85b99d 55%, #3e877b);
+}
+.media-art--forest .media-art__sun {
+  width: 24%;
+  top: 12%;
+  left: 64%;
+  background: #f6f8cf;
+}
+.media-art--forest .media-art__hill--back {
+  background: #609d82;
+}
+.media-art--forest .media-art__hill--front {
+  background: #1e665f;
+}
+.media-art--creative {
+  background: linear-gradient(130deg, #d8e7ff, #8aabf1 47%, #6b62c9);
+}
+.media-art--creative .media-art__sun {
+  width: 37%;
+  background: #e8dbff;
+}
+.media-art--creative .media-art__hill--back {
+  background: #778cdc;
+}
+.media-art--creative .media-art__hill--front {
+  background: #414c99;
+}

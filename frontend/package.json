@@ -1,0 +1,25 @@
+{
+  "name": "social-media-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "format": "prettier --write \"src/**/*.{js,jsx,css}\" vite.config.js package.json README.md"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "prettier": "^3.9.9",
+    "vite": "^7.0.0"
+  }
+}
