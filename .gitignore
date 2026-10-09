@@ -1,3 +1,4 @@
 .go-build/
 .go-tmp/
 .env
+media-service/uploads/
