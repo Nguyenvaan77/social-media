@@ -85,7 +85,7 @@ func (h *PostHandler) Create(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"post": post})
+	c.JSON(http.StatusCreated, gin.H{"data": post})
 }
 
 func (h *PostHandler) Get(c *gin.Context) {
@@ -99,7 +99,7 @@ func (h *PostHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"post": post})
+	c.JSON(http.StatusOK, gin.H{"data": post})
 }
 
 func (h *PostHandler) Update(c *gin.Context) {
@@ -118,7 +118,7 @@ func (h *PostHandler) Update(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"post": post})
+	c.JSON(http.StatusOK, gin.H{"data": post})
 }
 
 func (h *PostHandler) Delete(c *gin.Context) {

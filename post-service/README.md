@@ -25,9 +25,9 @@ When an API gateway is added, it must authenticate external requests, remove any
 
 | Method | Endpoint | Identity | Request | Success response |
 | --- | --- | --- | --- | --- |
-| `POST` | `/api/v1/posts` | `X-User-ID` | `{"text":"Hello","media_urls":["https://example.com/photo.jpg"]}` | `201` `{"post": {...}}` |
-| `GET` | `/api/v1/posts/:id` | None | No body | `200` `{"post": {...}}` |
-| `PATCH` | `/api/v1/posts/:id` | `X-User-ID` | `text` and/or `media_urls` | `200` `{"post": {...}}` |
+| `POST` | `/api/v1/posts` | `X-User-ID` | `{"text":"Hello","media_urls":["https://example.com/photo.jpg"]}` | `201` `{"data": {...}}` |
+| `GET` | `/api/v1/posts/:id` | None | No body | `200` `{"data": {...}}` |
+| `PATCH` | `/api/v1/posts/:id` | `X-User-ID` | `text` and/or `media_urls` | `200` `{"data": {...}}` |
 | `DELETE` | `/api/v1/posts/:id` | `X-User-ID` | No body | `204` No Content |
 | `GET` | `/api/v1/users/:user_id/posts?limit=20&offset=0` | None | Optional `limit`, `offset` | `200` `{"data":[...],"limit":20,"offset":0}` |
 
