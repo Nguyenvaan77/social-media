@@ -125,7 +125,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"user": privateView(user)})
+	c.JSON(http.StatusCreated, gin.H{"data": privateView(user)})
 }
 
 func (h *UserHandler) GetMe(c *gin.Context) {
@@ -134,7 +134,19 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": privateView(user)})
+	c.JSON(http.StatusOK, gin.H{"data": privateView(user)})
+}
+
+func (h *UserHandler) GetAllUsers(c *gin.Context) {
+	users, err := h.s.GetAllUsers()
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if users == nil {
+		users = []model.User{}
+	}
+	c.JSON(http.StatusOK, gin.H{"data": users})
 }
 
 func (h *UserHandler) UpdateMe(c *gin.Context) {
@@ -148,7 +160,7 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": privateView(user)})
+	c.JSON(http.StatusOK, gin.H{"data": privateView(user)})
 }
 
 func (h *UserHandler) GetPublicProfile(c *gin.Context) {
@@ -162,7 +174,7 @@ func (h *UserHandler) GetPublicProfile(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": publicView(user)})
+	c.JSON(http.StatusOK, gin.H{"data": publicView(user)})
 }
 
 func (h *UserHandler) Follow(c *gin.Context) {
@@ -174,7 +186,7 @@ func (h *UserHandler) Follow(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"following": true})
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"following": true}})
 }
 
 func (h *UserHandler) Unfollow(c *gin.Context) {
@@ -186,7 +198,7 @@ func (h *UserHandler) Unfollow(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"following": false})
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"following": false}})
 }
 
 func (h *UserHandler) FollowStatus(c *gin.Context) {
@@ -205,7 +217,7 @@ func (h *UserHandler) FollowStatus(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"following": following})
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"following": following}})
 }
 
 func (h *UserHandler) ListFollowing(c *gin.Context) {

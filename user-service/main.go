@@ -13,6 +13,9 @@ import (
 )
 
 func main() {
+	if err := config.LoadEnv(".env"); err != nil {
+		log.Fatal("load .env: ", err)
+	}
 	db, err := config.ConnectDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -28,7 +31,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8081"
 	}
 	log.Fatal(r.Run(":" + port))
 }

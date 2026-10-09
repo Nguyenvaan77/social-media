@@ -12,6 +12,7 @@ func SetupRouter(userHandler *handler.UserHandler) *gin.Engine {
 
 	users := api.Group("/users")
 	users.POST("", userHandler.CreateUser)
+	users.GET("", userHandler.GetAllUsers)
 	users.GET("/me", userHandler.RequireUserID, userHandler.GetMe)
 	users.PATCH("/me", userHandler.RequireUserID, userHandler.UpdateMe)
 	users.GET("/:id", userHandler.GetPublicProfile)

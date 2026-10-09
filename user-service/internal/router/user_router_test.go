@@ -73,11 +73,23 @@ func TestUserHTTPFlowWithoutServiceAuth(t *testing.T) {
 	}
 	userOf := func(response map[string]any) map[string]any {
 		t.Helper()
-		user, ok := response["user"].(map[string]any)
+		user, ok := response["data"].(map[string]any)
 		if !ok {
-			t.Fatalf("missing user in response: %#v", response)
+			t.Fatalf("missing user data in response: %#v", response)
 		}
 		return user
+	}
+	followingOf := func(response map[string]any) bool {
+		t.Helper()
+		data, ok := response["data"].(map[string]any)
+		if !ok {
+			t.Fatalf("missing follow data in response: %#v", response)
+		}
+		following, ok := data["following"].(bool)
+		if !ok {
+			t.Fatalf("missing following boolean in response: %#v", response)
+		}
+		return following
 	}
 
 	alice := userOf(request(http.MethodPost, "/api/v1/users", "", map[string]string{
@@ -93,6 +105,11 @@ func TestUserHTTPFlowWithoutServiceAuth(t *testing.T) {
 	bobID := int(bob["id"].(float64))
 	if bob["full_name"] != "bob" {
 		t.Fatalf("unexpected default name: %#v", bob)
+	}
+	allUsers := request(http.MethodGet, "/api/v1/users", "", nil, http.StatusOK)
+	users, ok := allUsers["data"].([]any)
+	if !ok || len(users) < 2 {
+		t.Fatalf("unexpected users data: %#v", allUsers)
 	}
 	request(http.MethodPost, "/api/v1/users", "", map[string]string{
 		"email": "ALICE@example.com",
@@ -137,14 +154,20 @@ func TestUserHTTPFlowWithoutServiceAuth(t *testing.T) {
 	alicePath := fmt.Sprintf("/api/v1/users/%d", aliceID)
 	request(http.MethodPost, bobPath+"/follow", "", nil, http.StatusBadRequest)
 	request(http.MethodPost, alicePath+"/follow", aliceHeader, nil, http.StatusBadRequest)
-	request(http.MethodPost, bobPath+"/follow", aliceHeader, nil, http.StatusOK)
-	request(http.MethodPost, bobPath+"/follow", aliceHeader, nil, http.StatusOK)
+	if !followingOf(request(http.MethodPost, bobPath+"/follow", aliceHeader, nil, http.StatusOK)) {
+		t.Fatal("follow response should be true")
+	}
+	if !followingOf(request(http.MethodPost, bobPath+"/follow", aliceHeader, nil, http.StatusOK)) {
+		t.Fatal("repeat follow response should be true")
+	}
 	statusPath := "/api/v1/follows/status?follower_id=" + aliceHeader + "&followee_id=" + strconv.Itoa(bobID)
-	if request(http.MethodGet, statusPath, "", nil, http.StatusOK)["following"] != true {
+	if !followingOf(request(http.MethodGet, statusPath, "", nil, http.StatusOK)) {
 		t.Fatal("follow status should be true")
 	}
-	request(http.MethodDelete, bobPath+"/follow", aliceHeader, nil, http.StatusOK)
-	if request(http.MethodGet, statusPath, "", nil, http.StatusOK)["following"] != false {
+	if followingOf(request(http.MethodDelete, bobPath+"/follow", aliceHeader, nil, http.StatusOK)) {
+		t.Fatal("unfollow response should be false")
+	}
+	if followingOf(request(http.MethodGet, statusPath, "", nil, http.StatusOK)) {
 		t.Fatal("follow status should be false")
 	}
 }

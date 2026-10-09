@@ -168,3 +168,7 @@ func (s *UserService) ListFollowers(userID, limit, offset int) ([]model.User, er
 	}
 	return s.r.ListFollowers(userID, limit, offset)
 }
+
+func (s *UserService) GetAllUsers() ([]model.User, error) {
+	return s.r.FindAll()
+}
