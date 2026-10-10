@@ -8,12 +8,26 @@ Create the MySQL database `user_service`, then run:
 
 ```powershell
 cd user-service
-go run .
+go run ./cmd
 ```
 
 The service loads `user-service/.env` when started from this directory. An existing
 `DATABASE_DSN` environment variable takes precedence over the file. `PORT` is
 optional and defaults to `8081`.
+
+## Run with Docker
+
+From the `user-service` directory:
+
+```powershell
+docker build -t social-user-service .
+docker run --rm --env-file .env -p 8081:8081 social-user-service
+```
+
+The image does not include `.env`; Docker passes those values at runtime. Set
+`DATABASE_DSN` to a MySQL address reachable from the container. For a database
+running on the host in Docker Desktop, use `host.docker.internal` instead of
+`localhost` in the DSN. Create the `user_service` database before starting.
 
 Startup migrates the `User` and `Follow` tables. Existing `passwordhash` columns and session tables are left in place for database compatibility, but the service does not use them. New users have an empty password hash.
 

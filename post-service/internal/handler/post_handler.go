@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -27,6 +29,8 @@ func respondError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "post not found"})
 	case errors.Is(err, service.ErrForbidden):
 		c.JSON(http.StatusForbidden, gin.H{"error": "only the author may change this post"})
+	case errors.Is(err, service.ErrConflict):
+		c.JSON(http.StatusConflict, gin.H{"error": "post changed during update; retry the request"})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
@@ -74,13 +78,27 @@ func authorID(c *gin.Context) int {
 	return c.MustGet("authorID").(int)
 }
 
+func decodePostJSON(c *gin.Context, destination any) error {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 64<<10)
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(destination); err != nil {
+		return err
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return service.ErrInvalidInput
+	}
+	return nil
+}
+
 func (h *PostHandler) Create(c *gin.Context) {
 	var input service.PostInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := decodePostJSON(c, &input); err != nil {
 		respondError(c, service.ErrInvalidInput)
 		return
 	}
-	post, err := h.s.Create(authorID(c), input)
+	post, err := h.s.Create(c.Request.Context(), authorID(c), input)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -89,12 +107,7 @@ func (h *PostHandler) Create(c *gin.Context) {
 }
 
 func (h *PostHandler) Get(c *gin.Context) {
-	id, err := parsePositiveID(c.Param("id"))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	post, err := h.s.Get(id)
+	post, err := h.s.Get(c.Request.Context(), c.Param("id"))
 	if err != nil {
 		respondError(c, err)
 		return
@@ -103,17 +116,12 @@ func (h *PostHandler) Get(c *gin.Context) {
 }
 
 func (h *PostHandler) Update(c *gin.Context) {
-	id, err := parsePositiveID(c.Param("id"))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
 	var update service.PostUpdate
-	if err := c.ShouldBindJSON(&update); err != nil {
+	if err := decodePostJSON(c, &update); err != nil {
 		respondError(c, service.ErrInvalidInput)
 		return
 	}
-	post, err := h.s.Update(id, authorID(c), update)
+	post, err := h.s.Update(c.Request.Context(), c.Param("id"), authorID(c), update)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -122,12 +130,7 @@ func (h *PostHandler) Update(c *gin.Context) {
 }
 
 func (h *PostHandler) Delete(c *gin.Context) {
-	id, err := parsePositiveID(c.Param("id"))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	if err := h.s.Delete(id, authorID(c)); err != nil {
+	if err := h.s.Delete(c.Request.Context(), c.Param("id"), authorID(c)); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -145,7 +148,7 @@ func (h *PostHandler) ListByAuthor(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	posts, err := h.s.ListByAuthor(id, limit, offset)
+	posts, err := h.s.ListByAuthor(c.Request.Context(), id, limit, offset)
 	if err != nil {
 		respondError(c, err)
 		return

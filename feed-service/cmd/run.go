@@ -28,7 +28,7 @@ func main() {
 	r := router.SetupRouter(feedHandler)
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8083"
+		port = "8080"
 	}
 	log.Fatal(r.Run(":" + port))
 }

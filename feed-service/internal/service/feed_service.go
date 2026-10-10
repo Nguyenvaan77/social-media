@@ -140,8 +140,8 @@ dispatch:
 }
 
 func newer(a model.Post, aAuthor int, b model.Post, bAuthor int) bool {
-	if !a.CreatedAt.Equal(b.CreatedAt) {
-		return a.CreatedAt.After(b.CreatedAt)
+	if !a.Metadata.CreatedAt.Equal(b.Metadata.CreatedAt) {
+		return a.Metadata.CreatedAt.After(b.Metadata.CreatedAt)
 	}
 	if a.ID != b.ID {
 		return a.ID > b.ID

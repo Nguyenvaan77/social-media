@@ -1,101 +1,152 @@
 package repository
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"post/internal/model"
 
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+var ErrNotFound = errors.New("post not found")
+var ErrConflict = errors.New("post changed during update")
+
 type PostRepository struct {
-	db *gorm.DB
+	collection *mongo.Collection
 }
 
-func NewPostRepository(db *gorm.DB) *PostRepository {
-	return &PostRepository{db: db}
+func NewPostRepository(collection *mongo.Collection) *PostRepository {
+	return &PostRepository{collection: collection}
 }
 
-func (r *PostRepository) Create(post *model.Post) error {
+func EnsureIndexes(ctx context.Context, collection *mongo.Collection) error {
+	_, err := collection.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "author", Value: 1},
+			{Key: "metadata.created_at", Value: -1},
+			{Key: "_id", Value: -1},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create posts index: %w", err)
+	}
+	return nil
+}
+
+func (r *PostRepository) Create(ctx context.Context, post *model.Post) error {
 	if post == nil {
 		return errors.New("create post: post is nil")
 	}
-	if post.MediaURLs == nil {
-		post.MediaURLs = []string{}
+	now := time.Now().UTC()
+	post.ID = bson.NewObjectID()
+	post.Action = model.PostAction{}
+	post.Comment = []model.PostComment{}
+	post.Metadata = model.PostMetadata{CreatedAt: now, LastUpdated: now}
+	if post.Content.Hastag == nil {
+		post.Content.Hastag = []string{}
 	}
-	if err := r.db.Create(post).Error; err != nil {
+	if _, err := r.collection.InsertOne(ctx, post); err != nil {
 		return fmt.Errorf("create post: %w", err)
 	}
 	return nil
 }
 
-func (r *PostRepository) FindByID(id int) (*model.Post, error) {
+func (r *PostRepository) FindByID(ctx context.Context, id bson.ObjectID) (*model.Post, error) {
 	var post model.Post
-	if err := r.db.First(&post, id).Error; err != nil {
-		return nil, fmt.Errorf("find post %d: %w", id, err)
+	err := r.collection.FindOne(ctx, bson.M{
+		"_id":                id,
+		"metadata.is_delete": false,
+		"metadata.is_hide":   false,
+		"metadata.is_block":  false,
+	}).Decode(&post)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, fmt.Errorf("find post %s: %w", id.Hex(), ErrNotFound)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find post %s: %w", id.Hex(), err)
 	}
 	return &post, nil
 }
 
-func (r *PostRepository) UpdateOwned(id, authorID int, updates map[string]interface{}) (*model.Post, error) {
-	if len(updates) == 0 {
+// UpdateOwned compares the content read by the service and atomically changes
+// only the requested fields. A conflicting edit is retried by the service so
+// validation always applies to the actual content being modified.
+func (r *PostRepository) UpdateOwned(ctx context.Context, id bson.ObjectID, authorID int, expected model.PostContent, fields map[string]any) (*model.Post, error) {
+	if len(fields) == 0 {
 		return nil, errors.New("update post: no fields provided")
 	}
-
-	values := make(map[string]interface{}, len(updates))
-	for field, value := range updates {
+	updates := make(bson.M, len(fields)+1)
+	for field, value := range fields {
 		switch field {
-		case "text":
-			text, ok := value.(string)
+		case "content.raw_content", "content.media.image", "content.media.video":
+			if _, ok := value.(string); !ok {
+				return nil, fmt.Errorf("update post: %s must be a string", field)
+			}
+		case "content.hastag":
+			tags, ok := value.([]string)
 			if !ok {
-				return nil, errors.New("update post: text must be a string")
+				return nil, errors.New("update post: content.hastag must be a string array")
 			}
-			values[field] = text
-		case "media_urls":
-			urls, ok := value.([]string)
-			if !ok {
-				return nil, errors.New("update post: media_urls must be a string array")
+			if tags == nil {
+				value = []string{}
 			}
-			if urls == nil {
-				urls = []string{}
-			}
-			encoded, err := json.Marshal(urls)
-			if err != nil {
-				return nil, fmt.Errorf("update post: encode media_urls: %w", err)
-			}
-			values[field] = string(encoded)
 		default:
 			return nil, fmt.Errorf("update post: unsupported field %q", field)
 		}
+		updates[field] = value
 	}
-
-	result := r.db.Model(&model.Post{}).
-		Where("id = ? AND author_id = ?", id, authorID).
-		Updates(values)
-	if result.Error != nil {
-		return nil, fmt.Errorf("update post %d: %w", id, result.Error)
+	updates["metadata.last_updated"] = time.Now().UTC()
+	if expected.Hastag == nil {
+		expected.Hastag = []string{}
 	}
+	filter := bson.M{
+		"_id":                 id,
+		"author":              authorID,
+		"metadata.is_delete":  false,
+		"metadata.is_hide":    false,
+		"metadata.is_block":   false,
+		"content.raw_content": expected.RawContent,
+		"content.hastag":      expected.Hastag,
+		"content.media.image": expected.Media.Image,
+		"content.media.video": expected.Media.Video,
+	}
+	update := bson.M{"$set": updates}
 	var post model.Post
-	if err := r.db.Where("id = ? AND author_id = ?", id, authorID).First(&post).Error; err != nil {
-		return nil, fmt.Errorf("load updated post %d: %w", id, err)
+	err := r.collection.FindOneAndUpdate(ctx, filter, update,
+		options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&post)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return nil, fmt.Errorf("update post %s: %w", id.Hex(), ErrConflict)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("update post %s: %w", id.Hex(), err)
 	}
 	return &post, nil
 }
 
-func (r *PostRepository) SoftDeleteOwned(id, authorID int) error {
-	result := r.db.Where("id = ? AND author_id = ?", id, authorID).Delete(&model.Post{})
-	if result.Error != nil {
-		return fmt.Errorf("delete post %d: %w", id, result.Error)
+func (r *PostRepository) SoftDeleteOwned(ctx context.Context, id bson.ObjectID, authorID int) error {
+	result, err := r.collection.UpdateOne(ctx, bson.M{
+		"_id":                id,
+		"author":             authorID,
+		"metadata.is_delete": false,
+	}, bson.M{"$set": bson.M{
+		"metadata.is_delete":    true,
+		"metadata.last_updated": time.Now().UTC(),
+	}})
+	if err != nil {
+		return fmt.Errorf("delete post %s: %w", id.Hex(), err)
 	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("delete post %d: %w", id, gorm.ErrRecordNotFound)
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("delete post %s: %w", id.Hex(), ErrNotFound)
 	}
 	return nil
 }
 
-func (r *PostRepository) ListByAuthor(authorID, limit, offset int) ([]model.Post, error) {
+func (r *PostRepository) ListByAuthor(ctx context.Context, authorID, limit, offset int) ([]model.Post, error) {
 	if limit <= 0 {
 		limit = 20
 	} else if limit > 100 {
@@ -105,12 +156,25 @@ func (r *PostRepository) ListByAuthor(authorID, limit, offset int) ([]model.Post
 		offset = 0
 	}
 
-	var posts []model.Post
-	if err := r.db.Where("author_id = ?", authorID).
-		Order("created_at DESC, id DESC").
-		Limit(limit).Offset(offset).
-		Find(&posts).Error; err != nil {
+	filter := bson.M{
+		"author":             authorID,
+		"metadata.is_delete": false,
+		"metadata.is_hide":   false,
+		"metadata.is_block":  false,
+	}
+	findOptions := options.Find().SetSort(bson.D{
+		{Key: "metadata.created_at", Value: -1},
+		{Key: "_id", Value: -1},
+	}).SetLimit(int64(limit)).SetSkip(int64(offset))
+	cursor, err := r.collection.Find(ctx, filter, findOptions)
+	if err != nil {
 		return nil, fmt.Errorf("list posts for author %d: %w", authorID, err)
+	}
+	defer cursor.Close(ctx)
+
+	posts := []model.Post{}
+	if err := cursor.All(ctx, &posts); err != nil {
+		return nil, fmt.Errorf("decode posts for author %d: %w", authorID, err)
 	}
 	return posts, nil
 }

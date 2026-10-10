@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -71,14 +72,26 @@ func (f *fakeSource) ListPosts(ctx context.Context, authorID, limit, offset int)
 
 func samplePost(authorID, id, minute int) model.Post {
 	return model.Post{
-		ID:        id,
-		AuthorID:  authorID,
-		CreatedAt: time.Date(2026, 10, 9, 0, minute, 0, 0, time.UTC),
+		ID:       hexID(id),
+		AuthorID: authorID,
+		Metadata: model.Metadata{CreatedAt: time.Date(2026, 10, 9, 0, minute, 0, 0, time.UTC)},
 	}
 }
 
-func ids(posts []model.Post) []int {
-	result := make([]int, len(posts))
+func hexID(id int) string {
+	return fmt.Sprintf("%024x", id)
+}
+
+func hexIDs(ids ...int) []string {
+	result := make([]string, len(ids))
+	for i, id := range ids {
+		result[i] = hexID(id)
+	}
+	return result
+}
+
+func ids(posts []model.Post) []string {
+	result := make([]string, len(posts))
 	for i, post := range posts {
 		result[i] = post.ID
 	}
@@ -99,7 +112,7 @@ func TestHomeNewestEligibleAndPaginationBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []int{110, 109, 206, 108, 107, 205, 304}
+	want := hexIDs(110, 109, 206, 108, 107, 205, 304)
 	if !reflect.DeepEqual(ids(all), want) {
 		t.Fatalf("all post IDs = %v, want %v", ids(all), want)
 	}
@@ -126,9 +139,9 @@ func TestHomeTieBreaksByIDThenAuthor(t *testing.T) {
 	source := &fakeSource{
 		following: []int{2, 3, 4},
 		posts: map[int][]model.Post{
-			2: {{ID: 8, AuthorID: 2, CreatedAt: at}},
-			3: {{ID: 9, AuthorID: 3, CreatedAt: at}},
-			4: {{ID: 8, AuthorID: 4, CreatedAt: at}},
+			2: {{ID: hexID(8), AuthorID: 2, Metadata: model.Metadata{CreatedAt: at}}},
+			3: {{ID: hexID(9), AuthorID: 3, Metadata: model.Metadata{CreatedAt: at}}},
+			4: {{ID: hexID(8), AuthorID: 4, Metadata: model.Metadata{CreatedAt: at}}},
 		},
 	}
 	got, err := NewFeedService(source).Home(context.Background(), 1, 3, 0)
@@ -155,7 +168,7 @@ func TestHomeStopsWhenOnlyOneAuthorRemains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(ids(got), []int{3, 2}) {
+	if !reflect.DeepEqual(ids(got), hexIDs(3, 2)) {
 		t.Fatalf("post IDs = %v, want [3 2]", ids(got))
 	}
 	page, err := feed.Home(context.Background(), 1, 10, 2)
@@ -207,7 +220,7 @@ func TestHomePaginatesAndDeduplicatesFollowing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(ids(got), []int{5}) {
+	if !reflect.DeepEqual(ids(got), hexIDs(5)) {
 		t.Fatalf("post IDs = %v, want [5]", ids(got))
 	}
 	if !reflect.DeepEqual(source.followOffsets, []int{0, 100}) {

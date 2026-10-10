@@ -14,10 +14,32 @@ $env:PORT = "8082" # optional
 $env:UPLOAD_DIR = "./uploads" # optional
 $env:PUBLIC_BASE_URL = "http://localhost:8082" # optional
 $env:MAX_FILE_SIZE_MB = "5" # optional; allowed range: 1-20
-go run .
+go run ./cmd
 ```
 
 Startup creates the upload directory and migrates the `media` table. `PUBLIC_BASE_URL` must be the public HTTP(S) origin used to access this service. Uploaded files receive URLs under `/uploads/`.
+
+## Run with Docker
+
+Build from the repository root:
+
+```powershell
+docker build -t social-media-media-service ./media-service
+docker volume create social-media-media-uploads
+```
+
+Run the container with MySQL on the Docker host (on Windows, `host.docker.internal` resolves to the host):
+
+```powershell
+docker run --rm --name media-service -p 8082:8082 `
+  --env 'DATABASE_DSN=root:password@tcp(host.docker.internal:3306)/media_service?charset=utf8mb4&parseTime=True&loc=Local' `
+  --env 'JWT_SECRET=replace-with-a-random-secret-of-at-least-32-bytes' `
+  --env 'PUBLIC_BASE_URL=http://localhost:8082' `
+  --mount 'type=volume,source=social-media-media-uploads,target=/uploads' `
+  social-media-media-service
+```
+
+Set `DATABASE_DSN` to the actual MySQL address and credentials. If MySQL is another container, connect both containers to the same Docker network and use its container name as the DSN host. The upload volume persists images across container replacements. The container runs as UID `10001`; if using a host bind mount instead, make that directory writable by UID `10001`. Set `PUBLIC_BASE_URL` to the URL clients use to reach the service so returned media URLs remain valid.
 
 ## Authentication
 

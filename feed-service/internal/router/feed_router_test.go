@@ -2,6 +2,7 @@ package router_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -40,7 +41,7 @@ func TestHomeFeedHTTP(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/api/v1/users/1", "/api/v1/users/me":
-			_ = json.NewEncoder(w).Encode(map[string]any{"user": map[string]any{"id": 1, "full_name": "Viewer", "status": "active", "created_at": "2026-10-08T14:00:00Z"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"id": 1, "full_name": "Viewer", "status": "active", "created_at": "2026-10-08T14:00:00Z"}})
 		case "/api/v1/users/1/following":
 			offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 			limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -124,12 +125,12 @@ func TestHomeFeedHTTP(t *testing.T) {
 	if full.Limit != 6 || full.Offset != 0 {
 		t.Fatalf("unexpected pagination: limit=%d offset=%d", full.Limit, full.Offset)
 	}
-	if got, want := postIDs(full.Data), []int{201, 202, 301, 203, 204, 302}; !reflect.DeepEqual(got, want) {
+	if got, want := postIDs(full.Data), hexIDs(201, 202, 301, 203, 204, 302); !reflect.DeepEqual(got, want) {
 		t.Fatalf("feed order = %v, want %v", got, want)
 	}
 	for i, p := range full.Data {
 		if p.AuthorID != 2 && p.AuthorID != 3 {
-			t.Fatalf("post %d has unfollowed author %d", p.ID, p.AuthorID)
+			t.Fatalf("post %s has unfollowed author %d", p.ID, p.AuthorID)
 		}
 		if i >= 2 && p.AuthorID == full.Data[i-1].AuthorID && p.AuthorID == full.Data[i-2].AuthorID {
 			t.Fatalf("three consecutive posts from author %d", p.AuthorID)
@@ -140,10 +141,10 @@ func TestHomeFeedHTTP(t *testing.T) {
 	// still start with author 3; offset cannot reset the author streak.
 	first := request("/home?limit=2", "1", http.StatusOK)
 	second := request("/api/v1/feed/home?limit=2&offset=2", "1", http.StatusOK)
-	if got, want := postIDs(first.Data), []int{201, 202}; !reflect.DeepEqual(got, want) {
+	if got, want := postIDs(first.Data), hexIDs(201, 202); !reflect.DeepEqual(got, want) {
 		t.Fatalf("first page = %v, want %v", got, want)
 	}
-	if got, want := postIDs(second.Data), []int{301, 203}; !reflect.DeepEqual(got, want) {
+	if got, want := postIDs(second.Data), hexIDs(301, 203); !reflect.DeepEqual(got, want) {
 		t.Fatalf("second page = %v, want %v", got, want)
 	}
 	if second.Limit != 2 || second.Offset != 2 {
@@ -157,8 +158,8 @@ func TestHomeFeedHTTP(t *testing.T) {
 
 type feedResponse struct {
 	Data []struct {
-		ID       int `json:"id"`
-		AuthorID int `json:"author_id"`
+		ID       string `json:"_id"`
+		AuthorID int    `json:"author"`
 	} `json:"data"`
 	Limit  int `json:"limit"`
 	Offset int `json:"offset"`
@@ -166,18 +167,39 @@ type feedResponse struct {
 
 func post(id, authorID int, createdAt string) map[string]any {
 	return map[string]any{
-		"id": id, "author_id": authorID, "text": "post",
-		"media_urls": []string{}, "created_at": createdAt, "updated_at": createdAt,
+		"_id": hexID(id), "author": authorID,
+		"content": map[string]any{
+			"raw_content": "post", "hastag": []string{},
+			"media": map[string]string{"image": "", "video": ""},
+		},
+		"action":  map[string]int{"like": 0, "unlike": 0, "love": 0, "angry": 0},
+		"comment": []any{},
+		"metadata": map[string]any{
+			"created_at": createdAt, "last_updated": createdAt,
+			"is_delete": false, "is_hide": false, "is_block": false,
+		},
 	}
 }
 
 func postIDs(posts []struct {
-	ID       int `json:"id"`
-	AuthorID int `json:"author_id"`
-}) []int {
-	ids := make([]int, 0, len(posts))
+	ID       string `json:"_id"`
+	AuthorID int    `json:"author"`
+}) []string {
+	ids := make([]string, 0, len(posts))
 	for _, p := range posts {
 		ids = append(ids, p.ID)
 	}
 	return ids
+}
+
+func hexID(id int) string {
+	return fmt.Sprintf("%024x", id)
+}
+
+func hexIDs(ids ...int) []string {
+	result := make([]string, len(ids))
+	for i, id := range ids {
+		result[i] = hexID(id)
+	}
+	return result
 }

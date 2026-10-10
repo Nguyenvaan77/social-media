@@ -1,0 +1,120 @@
+name: social-media
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in the root .env file}
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --host=127.0.0.1 --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 45s
+    networks:
+      - social-media-net
+
+  mongo:
+    image: mongo:8.0
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    networks:
+      - social-media-net
+
+  user-service:
+    build:
+      context: ./user-service
+    image: social-media/user-service:local
+    environment:
+      PORT: "8080"
+      DATABASE_DSN: root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/user_service?charset=utf8mb4&parseTime=True&loc=Local
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - social-media-net
+
+  post-service:
+    build:
+      context: ./post-service
+    image: social-media/post-service:local
+    environment:
+      PORT: "8080"
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DATABASE: post_service
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - social-media-net
+
+  media-service:
+    build:
+      context: ./media-service
+    image: social-media/media-service:local
+    environment:
+      PORT: "8080"
+      DATABASE_DSN: root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/media_service?charset=utf8mb4&parseTime=True&loc=Local
+      JWT_SECRET: ${MEDIA_JWT_SECRET:?Set MEDIA_JWT_SECRET in the root .env file}
+      PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-http://localhost:8082}
+      UPLOAD_DIR: /uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - media-uploads:/uploads
+    networks:
+      - social-media-net
+
+  feed-service:
+    build:
+      context: ./feed-service
+    image: social-media/feed-service:local
+    environment:
+      PORT: "8080"
+      USER_SERVICE_URL: http://user-service:8080
+      POST_SERVICE_URL: http://post-service:8080
+    depends_on:
+      user-service:
+        condition: service_started
+      post-service:
+        condition: service_started
+    networks:
+      - social-media-net
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+    image: social-media/gateway-service:local
+    environment:
+      PORT: "8080"
+      USER_SERVICE_URL: http://user-service:8080
+    depends_on:
+      user-service:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - social-media-net
+
+networks:
+  social-media-net:
+    name: social-media-net
+    driver: bridge
+
+volumes:
+  mysql-data:
+  mongo-data:
+  media-uploads:

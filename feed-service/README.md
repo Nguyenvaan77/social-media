@@ -4,17 +4,29 @@ Feed Service builds a home feed from the accounts a user follows. It has no data
 
 ## Run locally
 
-Start User Service on port `8080` and Post Service on port `8081`, then run:
+Start User Service on its default port `8081` and Post Service with `PORT=8084`, then run:
 
 ```powershell
 cd feed-service
-$env:USER_SERVICE_URL = "http://localhost:8080" # optional
-$env:POST_SERVICE_URL = "http://localhost:8081" # optional
+$env:USER_SERVICE_URL = "http://localhost:8081"
+$env:POST_SERVICE_URL = "http://localhost:8084"
 $env:PORT = "8083" # optional
-go run .
+go run ./cmd
 ```
 
-These are the default values. Both upstream services must be reachable for the feed to load.
+Both upstream services must be reachable for the feed to load. Set the URLs explicitly because the services otherwise use overlapping default ports when run on one host.
+
+## Docker
+
+Build from the service directory and pass URLs reachable from the container:
+
+```powershell
+cd feed-service
+docker build -t social-feed-service .
+docker run --rm -p 8083:8083 -e USER_SERVICE_URL=http://host.docker.internal:8081 -e POST_SERVICE_URL=http://host.docker.internal:8084 social-feed-service
+```
+
+`host.docker.internal` reaches services running on the host with Docker Desktop. The Post Service Docker example maps it to host port `8084`. When all services share a Docker network, use their container names and internal ports instead. The container listens on port `8083` by default; set `PORT` and adjust the port mapping to change it.
 
 ## Identity
 
@@ -34,12 +46,22 @@ Successful response:
 {
   "data": [
     {
-      "id": 42,
-      "author_id": 2,
-      "text": "A new post",
-      "media_urls": [],
-      "created_at": "2026-10-08T14:00:00Z",
-      "updated_at": "2026-10-08T14:00:00Z"
+      "_id": "6707a1b2c3d4e5f607182930",
+      "author": 2,
+      "content": {
+        "raw_content": "A new post",
+        "hastag": [],
+        "media": {"image": "", "video": ""}
+      },
+      "action": {"like": 0, "unlike": 0, "love": 0, "angry": 0},
+      "comment": [],
+      "metadata": {
+        "created_at": "2026-10-08T14:00:00Z",
+        "last_updated": "2026-10-08T14:00:00Z",
+        "is_delete": false,
+        "is_hide": false,
+        "is_block": false
+      }
     }
   ],
   "limit": 20,
@@ -47,7 +69,7 @@ Successful response:
 }
 ```
 
-`data` contains Post Service post objects from followed users only. The feed chooses the newest eligible post at each position, while ensuring that three consecutive posts never have the same author. When only one author has remaining posts and another post from that author would break this rule, the feed stops, so a page can contain fewer than `limit` posts. An account following nobody receives an empty `data` array. `offset` skips positions in the feed after applying this ordering rule.
+`data` contains Post Service MongoDB post objects from followed users only. The feed orders by `metadata.created_at` descending and breaks timestamp ties with `_id`, while ensuring that three consecutive posts never have the same author. Post Service excludes deleted, hidden, and blocked documents from its public list. When only one author has remaining posts and another post from that author would break this rule, the feed stops, so a page can contain fewer than `limit` posts. An account following nobody receives an empty `data` array. `offset` skips positions in the feed after applying this ordering rule.
 
 The feed is rebuilt for each request. New posts published between page requests can shift `offset` positions.
 

@@ -31,7 +31,7 @@ func maxFileBytes() (int64, error) {
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8082"
+		port = "8080"
 	}
 	limit, err := maxFileBytes()
 	if err != nil {

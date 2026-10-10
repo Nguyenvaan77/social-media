@@ -1,17 +1,38 @@
 package config
 
 import (
-	"errors"
+	"context"
+	"fmt"
 	"os"
+	"strings"
+	"time"
 
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func ConnectDatabase() (*gorm.DB, error) {
-	dsn := os.Getenv("DATABASE_DSN")
-	if dsn == "" {
-		return nil, errors.New("DATABASE_DSN is required")
+const (
+	defaultMongoURI      = "mongodb://127.0.0.1:27017"
+	defaultMongoDatabase = "post_service"
+)
+
+func ConnectDatabase(ctx context.Context) (*mongo.Client, *mongo.Database, error) {
+	uri := strings.TrimSpace(os.Getenv("MONGODB_URI"))
+	if uri == "" {
+		uri = defaultMongoURI
 	}
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{TranslateError: true})
+	databaseName := strings.TrimSpace(os.Getenv("MONGODB_DATABASE"))
+	if databaseName == "" {
+		databaseName = defaultMongoDatabase
+	}
+
+	client, err := mongo.Connect(options.Client().ApplyURI(uri).SetServerSelectionTimeout(5 * time.Second))
+	if err != nil {
+		return nil, nil, fmt.Errorf("connect MongoDB: %w", err)
+	}
+	if err := client.Ping(ctx, nil); err != nil {
+		_ = client.Disconnect(context.Background())
+		return nil, nil, fmt.Errorf("ping MongoDB: %w", err)
+	}
+	return client, client.Database(databaseName), nil
 }

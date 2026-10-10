@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -132,8 +133,12 @@ func (c *Client) ListPosts(ctx context.Context, authorID, limit, offset int) ([]
 		return nil, fmt.Errorf("%w: malformed posts data", ErrUnavailable)
 	}
 	for _, post := range posts {
-		if post.ID <= 0 || post.AuthorID != authorID || post.CreatedAt.IsZero() {
+		if len(post.ID) != 24 || post.AuthorID != authorID || post.Metadata.CreatedAt.IsZero() ||
+			post.Metadata.IsDelete || post.Metadata.IsHide || post.Metadata.IsBlock {
 			return nil, fmt.Errorf("%w: invalid post metadata", ErrUnavailable)
+		}
+		if _, err := hex.DecodeString(post.ID); err != nil {
+			return nil, fmt.Errorf("%w: invalid post ID", ErrUnavailable)
 		}
 	}
 	return posts, nil

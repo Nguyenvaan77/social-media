@@ -1,0 +1,6 @@
+.env
+.env.*
+.go-build/
+.go-tmp/
+**/*_test.go
+README.md
