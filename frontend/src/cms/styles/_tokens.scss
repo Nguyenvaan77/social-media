@@ -1,0 +1,12 @@
+$cms-teal: #0d9488;
+$cms-teal-dark: #0f766e;
+$cms-ink: #0f172a;
+$cms-muted: #64748b;
+$cms-line: #e2e8f0;
+$cms-canvas: #f8fafc;
+$cms-white: #ffffff;
+
+@mixin cms-focus {
+  outline: 2px solid $cms-teal;
+  outline-offset: 2px;
+}

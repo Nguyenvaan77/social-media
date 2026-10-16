@@ -5,10 +5,12 @@ import ProfilePage from '../pages/ProfilePage.jsx'
 import ReelsPage from '../pages/ReelsPage.jsx'
 import MessagesPage from '../pages/MessagesPage.jsx'
 import FriendsPage from '../pages/FriendsPage.jsx'
+import CmsRouter from '../cms/CmsRouter.tsx'
 
 export default function AppRoutes() {
   return (
     <Routes>
+      <Route path="cms/*" element={<CmsRouter />} />
       <Route element={<MainLayout />}>
         <Route index element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
