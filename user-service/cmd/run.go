@@ -6,23 +6,23 @@ import (
 
 	"user/internal/config"
 	"user/internal/handler"
-	"user/internal/model"
+	// "user/internal/model"
 	"user/internal/repository"
 	"user/internal/router"
 	"user/internal/service"
 )
 
 func main() {
-	if err := config.LoadEnv(".env"); err != nil {
+	if err := config.LoadEnv("user-service/.env", ".env", "../.env"); err != nil {
 		log.Fatal("load .env: ", err)
 	}
 	db, err := config.ConnectDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Follow{}); err != nil {
-		log.Fatal("migrate database: ", err)
-	}
+	// if err := db.AutoMigrate(&model.User{}, &model.Follow{}); err != nil {
+	// 	log.Fatal("migrate database: ", err)
+	// }
 
 	userRepository := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepository)
@@ -31,7 +31,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8081"
 	}
 	log.Fatal(r.Run(":" + port))
 }

@@ -12,6 +12,19 @@ npm run dev
 
 Open `http://localhost:5173/cms`. Run `npm run build` for TypeScript checking and a production build.
 
+## Deploy to Vercel
+
+Set the Vercel project's **Root Directory** to `frontend`. Vercel then uses the included `vercel.json` rewrite to serve the SPA entry point for direct visits and refreshes on routes such as `/cms/admin`.
+
+Use these build settings if Vercel does not detect them automatically:
+
+| Setting | Value |
+| --- | --- |
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | `npm install` |
+
 ## Screens
 
 | Screen | Route |

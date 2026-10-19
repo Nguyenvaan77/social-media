@@ -8,35 +8,41 @@ import (
 	"strings"
 )
 
-// LoadEnv loads values from a local .env file without overriding the process environment.
-// A missing file is allowed so deployments can provide environment variables directly.
-func LoadEnv(path string) error {
-	file, err := os.Open(path)
-	if errors.Is(err, os.ErrNotExist) {
+// LoadEnv loads the first existing .env file without overriding process variables.
+// Missing files are allowed because deployments may supply variables directly.
+func LoadEnv(paths ...string) error {
+	for _, path := range paths {
+		file, err := os.Open(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("open %s: %w", path, err)
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for lineNumber := 1; scanner.Scan(); lineNumber++ {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			key, value, ok := strings.Cut(line, "=")
+			key = strings.TrimSpace(key)
+			if !ok || key == "" {
+				return fmt.Errorf("invalid .env entry at line %d in %s", lineNumber, path)
+			}
+			if _, exists := os.LookupEnv(key); exists {
+				continue
+			}
+			if err := os.Setenv(key, strings.TrimSpace(value)); err != nil {
+				return fmt.Errorf("invalid .env entry at line %d in %s: %w", lineNumber, path, err)
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("read %s: %w", path, err)
+		}
 		return nil
 	}
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for lineNumber := 1; scanner.Scan(); lineNumber++ {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		key, value, ok := strings.Cut(line, "=")
-		key = strings.TrimSpace(key)
-		if !ok || key == "" {
-			return fmt.Errorf("invalid .env entry at line %d", lineNumber)
-		}
-		if _, exists := os.LookupEnv(key); exists {
-			continue
-		}
-		if err := os.Setenv(key, strings.TrimSpace(value)); err != nil {
-			return fmt.Errorf("invalid .env entry at line %d: %w", lineNumber, err)
-		}
-	}
-	return scanner.Err()
+	return nil
 }

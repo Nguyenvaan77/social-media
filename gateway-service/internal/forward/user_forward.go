@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"gateway/internal/user/model"
+	"gateway/internal/model"
 
 	"github.com/gin-gonic/gin"
 )

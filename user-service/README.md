@@ -11,7 +11,8 @@ cd user-service
 go run ./cmd
 ```
 
-The service loads `user-service/.env` when started from this directory. An existing
+The service loads `user-service/.env` when started from the repository root,
+`user-service`, or `user-service/cmd` (`go run .` from `cmd`). An existing
 `DATABASE_DSN` environment variable takes precedence over the file. `PORT` is
 optional and defaults to `8081`.
 
@@ -29,7 +30,7 @@ The image does not include `.env`; Docker passes those values at runtime. Set
 running on the host in Docker Desktop, use `host.docker.internal` instead of
 `localhost` in the DSN. Create the `user_service` database before starting.
 
-Startup migrates the `User` and `Follow` tables. Existing `passwordhash` columns and session tables are left in place for database compatibility, but the service does not use them. New users have an empty password hash.
+The `User` and `Follow` tables must exist before startup. Existing `passwordhash` columns and session tables are left in place for database compatibility, but the service does not use them. New users have an empty password hash.
 
 ## Identity contract
 

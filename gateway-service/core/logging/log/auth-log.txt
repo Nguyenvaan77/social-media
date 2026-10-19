@@ -1,0 +1,12 @@
+{"time":"2026-10-14T17:37:50.0132216+07:00","level":"INFO","msg":"Auth warning","detail":"Missing Authorization header","method":"GET","path":"/api/v1/users","entry_time":"2026-10-14T17:37:50.0132216+07:00"}
+{"time":"2026-10-14T17:38:16.3981967+07:00","level":"INFO","msg":"Auth warning","detail":"Missing Authorization header","method":"GET","path":"/api/v1/users","entry_time":"2026-10-14T17:38:16.3981967+07:00"}
+{"time":"2026-10-15T18:52:16.3000326+07:00","level":"INFO","msg":"Auth warning","detail":"Missing Authorization header","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T18:52:16.3000326+07:00"}
+{"time":"2026-10-15T21:51:41.1680292+07:00","level":"ERROR","msg":"Auth Error","detail":"JWT configuration is missing or invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T21:51:41.1680292+07:00"}
+{"time":"2026-10-15T21:52:19.075703+07:00","level":"ERROR","msg":"Auth Error","detail":"JWT configuration is missing or invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T21:52:19.075703+07:00"}
+{"time":"2026-10-15T21:54:11.8249995+07:00","level":"ERROR","msg":"Auth Error","detail":"JWT configuration is missing or invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T21:54:11.8249995+07:00"}
+{"time":"2026-10-15T21:55:54.1907181+07:00","level":"ERROR","msg":"Auth Error","detail":"JWT configuration is missing or invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T21:55:54.1907181+07:00"}
+{"time":"2026-10-15T21:56:23.3923225+07:00","level":"ERROR","msg":"Auth Error","detail":"JWT configuration is missing or invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T21:56:23.3923225+07:00"}
+{"time":"2026-10-15T21:56:38.3033257+07:00","level":"ERROR","msg":"Auth Error","detail":"JWT configuration is missing or invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T21:56:38.3033257+07:00"}
+{"time":"2026-10-15T21:57:48.4939353+07:00","level":"ERROR","msg":"Auth Error","detail":"JWT configuration is missing or invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T21:57:48.4934098+07:00","secret":""}
+{"time":"2026-10-15T22:03:19.4618073+07:00","level":"INFO","msg":"Auth Error","detail":"Token is invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T22:03:19.4612676+07:00"}
+{"time":"2026-10-15T22:04:01.0098385+07:00","level":"INFO","msg":"Auth Error","detail":"Token is invalid","method":"GET","path":"/api/v1/users","entry_time":"2026-10-15T22:04:01.0098385+07:00"}

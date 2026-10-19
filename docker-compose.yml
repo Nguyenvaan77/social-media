@@ -18,6 +18,21 @@ services:
     networks:
       - social-media-net
 
+  auth-db-init:
+    image: mysql:8.4
+    environment:
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in the root .env file}
+    command:
+      - mysql
+      - --host=mysql
+      - --user=root
+      - --execute=CREATE DATABASE IF NOT EXISTS auth_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - social-media-net
+
   mongo:
     image: mongo:8.0
     volumes:
@@ -43,6 +58,44 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - social-media-net
+
+  auth-service:
+    build:
+      context: ./auth-service
+    image: social-media/auth-service:local
+    environment:
+      PORT: "8080"
+      JWT_ISSUER: ${AUTH_JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-social-media}
+      JWT_EXPIRATION: ${AUTH_JWT_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION: ${AUTH_JWT_REFRESH_EXPIRATION:-168h}
+      DATABASE_DSN: root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/auth_service?charset=utf8mb4&parseTime=True&loc=Local
+      JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET in the root .env file}
+    depends_on:
+      auth-db-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8083:8080"
+    networks:
+      - social-media-net
+
+  auth-seed:
+    profiles:
+      - seed
+    build:
+      context: ./auth-service
+    image: social-media/auth-service:local
+    command: seed
+    environment:
+      DATABASE_DSN: root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/auth_service?charset=utf8mb4&parseTime=True&loc=Local
+      AUTH_SEED_USER_PASSWORD: ${AUTH_SEED_USER_PASSWORD:-}
+      AUTH_SEED_ADMIN_PASSWORD: ${AUTH_SEED_ADMIN_PASSWORD:-}
+      AUTH_SEED_ADMIN_GROUP_PASSWORD: ${AUTH_SEED_ADMIN_GROUP_PASSWORD:-}
+    depends_on:
+      auth-db-init:
+        condition: service_completed_successfully
     networks:
       - social-media-net
 
@@ -100,9 +153,16 @@ services:
     image: social-media/gateway-service:local
     environment:
       PORT: "8080"
+      JWT_ISSUER: ${AUTH_JWT_ISSUER:-auth-service}
+      JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-social-media}
+      JWT_EXPIRATION: ${AUTH_JWT_EXPIRATION:-15m}
       USER_SERVICE_URL: http://user-service:8080
+      AUTH_SERVICE_URL: http://auth-service:8080
+      JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET in the root .env file}
     depends_on:
       user-service:
+        condition: service_started
+      auth-service:
         condition: service_started
     ports:
       - "127.0.0.1:8080:8080"
