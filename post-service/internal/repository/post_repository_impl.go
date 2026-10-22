@@ -16,12 +16,14 @@ import (
 var ErrNotFound = errors.New("post not found")
 var ErrConflict = errors.New("post changed during update")
 
-type PostRepository struct {
+type PostRepositoryImpl struct {
 	collection *mongo.Collection
 }
 
-func NewPostRepository(collection *mongo.Collection) *PostRepository {
-	return &PostRepository{collection: collection}
+var _ PostRepository = (*PostRepositoryImpl)(nil)
+
+func NewPostRepository(collection *mongo.Collection) *PostRepositoryImpl {
+	return &PostRepositoryImpl{collection: collection}
 }
 
 func EnsureIndexes(ctx context.Context, collection *mongo.Collection) error {
@@ -38,7 +40,7 @@ func EnsureIndexes(ctx context.Context, collection *mongo.Collection) error {
 	return nil
 }
 
-func (r *PostRepository) Create(ctx context.Context, post *model.Post) error {
+func (r *PostRepositoryImpl) Create(ctx context.Context, post *model.Post) error {
 	if post == nil {
 		return errors.New("create post: post is nil")
 	}
@@ -56,7 +58,7 @@ func (r *PostRepository) Create(ctx context.Context, post *model.Post) error {
 	return nil
 }
 
-func (r *PostRepository) FindByID(ctx context.Context, id bson.ObjectID) (*model.Post, error) {
+func (r *PostRepositoryImpl) FindByID(ctx context.Context, id bson.ObjectID) (*model.Post, error) {
 	var post model.Post
 	err := r.collection.FindOne(ctx, bson.M{
 		"_id":                id,
@@ -76,7 +78,7 @@ func (r *PostRepository) FindByID(ctx context.Context, id bson.ObjectID) (*model
 // UpdateOwned compares the content read by the service and atomically changes
 // only the requested fields. A conflicting edit is retried by the service so
 // validation always applies to the actual content being modified.
-func (r *PostRepository) UpdateOwned(ctx context.Context, id bson.ObjectID, authorID int, expected model.PostContent, fields map[string]any) (*model.Post, error) {
+func (r *PostRepositoryImpl) UpdateOwned(ctx context.Context, id bson.ObjectID, authorID int, expected model.PostContent, fields map[string]any) (*model.Post, error) {
 	if len(fields) == 0 {
 		return nil, errors.New("update post: no fields provided")
 	}
@@ -128,7 +130,7 @@ func (r *PostRepository) UpdateOwned(ctx context.Context, id bson.ObjectID, auth
 	return &post, nil
 }
 
-func (r *PostRepository) SoftDeleteOwned(ctx context.Context, id bson.ObjectID, authorID int) error {
+func (r *PostRepositoryImpl) SoftDeleteOwned(ctx context.Context, id bson.ObjectID, authorID int) error {
 	result, err := r.collection.UpdateOne(ctx, bson.M{
 		"_id":                id,
 		"author":             authorID,
@@ -146,7 +148,7 @@ func (r *PostRepository) SoftDeleteOwned(ctx context.Context, id bson.ObjectID, 
 	return nil
 }
 
-func (r *PostRepository) ListByAuthor(ctx context.Context, authorID, limit, offset int) ([]model.Post, error) {
+func (r *PostRepositoryImpl) ListByAuthor(ctx context.Context, authorID, limit, offset int) ([]model.Post, error) {
 	if limit <= 0 {
 		limit = 20
 	} else if limit > 100 {

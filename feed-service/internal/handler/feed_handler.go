@@ -13,10 +13,10 @@ import (
 )
 
 type FeedHandler struct {
-	s *service.FeedService
+	s service.FeedService
 }
 
-func NewFeedHandler(feedService *service.FeedService) *FeedHandler {
+func NewFeedHandler(feedService service.FeedService) *FeedHandler {
 	return &FeedHandler{s: feedService}
 }
 

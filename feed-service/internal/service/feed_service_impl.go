@@ -24,12 +24,14 @@ type Source interface {
 	ListPosts(ctx context.Context, authorID, limit, offset int) ([]model.Post, error)
 }
 
-type FeedService struct {
+type FeedServiceImpl struct {
 	source Source
 }
 
-func NewFeedService(source Source) *FeedService {
-	return &FeedService{source: source}
+var _ FeedService = (*FeedServiceImpl)(nil)
+
+func NewFeedService(source Source) *FeedServiceImpl {
+	return &FeedServiceImpl{source: source}
 }
 
 type authorCursor struct {
@@ -47,7 +49,7 @@ func (c *authorCursor) current() (model.Post, bool) {
 	return c.posts[c.index], true
 }
 
-func (s *FeedService) loadPage(ctx context.Context, c *authorCursor) error {
+func (s *FeedServiceImpl) loadPage(ctx context.Context, c *authorCursor) error {
 	if c.exhausted {
 		c.posts = nil
 		c.index = 0
@@ -67,7 +69,7 @@ func (s *FeedService) loadPage(ctx context.Context, c *authorCursor) error {
 	return nil
 }
 
-func (s *FeedService) following(ctx context.Context, userID int) ([]int, error) {
+func (s *FeedServiceImpl) following(ctx context.Context, userID int) ([]int, error) {
 	ids := make([]int, 0)
 	seen := make(map[int]struct{})
 	for offset := 0; ; offset += followingPageSize {
@@ -94,7 +96,7 @@ func (s *FeedService) following(ctx context.Context, userID int) ([]int, error) 
 	}
 }
 
-func (s *FeedService) initialHeads(ctx context.Context, cursors []authorCursor) error {
+func (s *FeedServiceImpl) initialHeads(ctx context.Context, cursors []authorCursor) error {
 	if len(cursors) == 0 {
 		return nil
 	}
@@ -153,7 +155,7 @@ func newer(a model.Post, aAuthor int, b model.Post, bAuthor int) bool {
 // emitted posts share an author, that author is temporarily ineligible. If no
 // other author has a post, the feed ends; the rule is never relaxed. Pagination
 // is replayed from the start so the rule also holds across page boundaries.
-func (s *FeedService) Home(ctx context.Context, userID, limit, offset int) ([]model.Post, error) {
+func (s *FeedServiceImpl) Home(ctx context.Context, userID, limit, offset int) ([]model.Post, error) {
 	if userID <= 0 || limit < 1 || limit > 50 || offset < 0 || offset > 1000 {
 		return nil, ErrInvalidInput
 	}

@@ -20,17 +20,19 @@ var (
 	ErrEmptyUpdate  = errors.New("no profile fields supplied")
 )
 
-type UserService struct {
-	r *repository.UserRepository
+type UserServiceImpl struct {
+	r repository.UserRepository
 }
+
+var _ UserService = (*UserServiceImpl)(nil)
 
 type ProfileUpdate struct {
 	Email    *string `json:"email"`
 	FullName *string `json:"full_name"`
 }
 
-func NewUserService(userRepository *repository.UserRepository) *UserService {
-	return &UserService{r: userRepository}
+func NewUserService(userRepository repository.UserRepository) *UserServiceImpl {
+	return &UserServiceImpl{r: userRepository}
 }
 
 func normalizeEmail(value string) (string, error) {
@@ -50,7 +52,7 @@ func validateName(value string) (string, error) {
 	return name, nil
 }
 
-func (s *UserService) CreateUser(email, fullName string) (*model.User, error) {
+func (s *UserServiceImpl) CreateUser(email, fullName string) (*model.User, error) {
 	var err error
 	email, err = normalizeEmail(email)
 	if err != nil {
@@ -80,7 +82,7 @@ func (s *UserService) CreateUser(email, fullName string) (*model.User, error) {
 	return user, nil
 }
 
-func (s *UserService) GetUser(id int) (*model.User, error) {
+func (s *UserServiceImpl) GetUser(id int) (*model.User, error) {
 	if id <= 0 {
 		return nil, ErrInvalidInput
 	}
@@ -91,7 +93,7 @@ func (s *UserService) GetUser(id int) (*model.User, error) {
 	return user, err
 }
 
-func (s *UserService) UpdateProfile(id int, update ProfileUpdate) (*model.User, error) {
+func (s *UserServiceImpl) UpdateProfile(id int, update ProfileUpdate) (*model.User, error) {
 	fields := make(map[string]interface{})
 	if update.Email != nil {
 		email, err := normalizeEmail(*update.Email)
@@ -120,7 +122,7 @@ func (s *UserService) UpdateProfile(id int, update ProfileUpdate) (*model.User, 
 	return user, err
 }
 
-func (s *UserService) Follow(followerID, followeeID int) error {
+func (s *UserServiceImpl) Follow(followerID, followeeID int) error {
 	if followerID == followeeID {
 		return ErrSelfFollow
 	}
@@ -134,7 +136,7 @@ func (s *UserService) Follow(followerID, followeeID int) error {
 	return err
 }
 
-func (s *UserService) Unfollow(followerID, followeeID int) error {
+func (s *UserServiceImpl) Unfollow(followerID, followeeID int) error {
 	if _, err := s.GetUser(followerID); err != nil {
 		return err
 	}
@@ -145,7 +147,7 @@ func (s *UserService) Unfollow(followerID, followeeID int) error {
 	return err
 }
 
-func (s *UserService) IsFollowing(followerID, followeeID int) (bool, error) {
+func (s *UserServiceImpl) IsFollowing(followerID, followeeID int) (bool, error) {
 	if _, err := s.GetUser(followerID); err != nil {
 		return false, err
 	}
@@ -155,20 +157,20 @@ func (s *UserService) IsFollowing(followerID, followeeID int) (bool, error) {
 	return s.r.IsFollowing(followerID, followeeID)
 }
 
-func (s *UserService) ListFollowing(userID, limit, offset int) ([]model.User, error) {
+func (s *UserServiceImpl) ListFollowing(userID, limit, offset int) ([]model.User, error) {
 	if _, err := s.GetUser(userID); err != nil {
 		return nil, err
 	}
 	return s.r.ListFollowing(userID, limit, offset)
 }
 
-func (s *UserService) ListFollowers(userID, limit, offset int) ([]model.User, error) {
+func (s *UserServiceImpl) ListFollowers(userID, limit, offset int) ([]model.User, error) {
 	if _, err := s.GetUser(userID); err != nil {
 		return nil, err
 	}
 	return s.r.ListFollowers(userID, limit, offset)
 }
 
-func (s *UserService) GetAllUsers() ([]model.User, error) {
+func (s *UserServiceImpl) GetAllUsers() ([]model.User, error) {
 	return s.r.FindAll()
 }

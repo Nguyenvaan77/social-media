@@ -24,7 +24,7 @@ type refreshTokenClaims struct {
 
 var ErrInvalidRefreshToken = errors.New("invalid refresh token")
 
-func (s *AuthService) signAccessToken(userID int, lifetime time.Duration, key []byte) (string, error) {
+func (s *AuthServiceImpl) signAccessToken(userID int, lifetime time.Duration, key []byte) (string, error) {
 	var tokenID [16]byte
 	if _, err := rand.Read(tokenID[:]); err != nil {
 		return "", err
@@ -51,7 +51,7 @@ func (s *AuthService) signAccessToken(userID int, lifetime time.Duration, key []
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(key)
 }
 
-func (s *AuthService) signRefreshToken(ctx context.Context, userID int, lifetime time.Duration, key []byte) (string, error) {
+func (s *AuthServiceImpl) signRefreshToken(ctx context.Context, userID int, lifetime time.Duration, key []byte) (string, error) {
 	token, secret, err := s.newRefreshToken(userID, lifetime, key)
 	if err != nil {
 		return "", err
@@ -62,7 +62,7 @@ func (s *AuthService) signRefreshToken(ctx context.Context, userID int, lifetime
 	return token, nil
 }
 
-func (s *AuthService) newRefreshToken(userID int, lifetime time.Duration, key []byte) (string, string, error) {
+func (s *AuthServiceImpl) newRefreshToken(userID int, lifetime time.Duration, key []byte) (string, string, error) {
 	var tokenID [16]byte
 	if _, err := rand.Read(tokenID[:]); err != nil {
 		return "", "", err
@@ -89,7 +89,7 @@ func (s *AuthService) newRefreshToken(userID int, lifetime time.Duration, key []
 	return token, secret, err
 }
 
-func (s *AuthService) ParseRefreshToken(raw string) (jwt.MapClaims, error) {
+func (s *AuthServiceImpl) ParseRefreshToken(raw string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(raw,
 		func(token *jwt.Token) (any, error) {
 			if token.Method != jwt.SigningMethodHS256 {
@@ -124,7 +124,7 @@ func (s *AuthService) ParseRefreshToken(raw string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func (s *AuthService) getPermissionClaims(userID int) ([]string, error) {
+func (s *AuthServiceImpl) getPermissionClaims(userID int) ([]string, error) {
 	permissions, err := s.authRepository.GetPermissionsByUserID(userID)
 	if err != nil {
 		return []string{}, err

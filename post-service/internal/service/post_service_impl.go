@@ -49,12 +49,14 @@ type PostUpdate struct {
 	Content *PostContentPatch `json:"content"`
 }
 
-type PostService struct {
-	r *repository.PostRepository
+type PostServiceImpl struct {
+	r repository.PostRepository
 }
 
-func NewPostService(postRepository *repository.PostRepository) *PostService {
-	return &PostService{r: postRepository}
+var _ PostService = (*PostServiceImpl)(nil)
+
+func NewPostService(postRepository repository.PostRepository) *PostServiceImpl {
+	return &PostServiceImpl{r: postRepository}
 }
 
 func validateMediaURL(raw string) (string, error) {
@@ -116,7 +118,7 @@ func parsePostID(raw string) (bson.ObjectID, error) {
 	return id, nil
 }
 
-func (s *PostService) Create(ctx context.Context, authorID int, input PostInput) (*model.Post, error) {
+func (s *PostServiceImpl) Create(ctx context.Context, authorID int, input PostInput) (*model.Post, error) {
 	if authorID <= 0 {
 		return nil, ErrInvalidInput
 	}
@@ -131,7 +133,7 @@ func (s *PostService) Create(ctx context.Context, authorID int, input PostInput)
 	return post, nil
 }
 
-func (s *PostService) Get(ctx context.Context, rawID string) (*model.Post, error) {
+func (s *PostServiceImpl) Get(ctx context.Context, rawID string) (*model.Post, error) {
 	id, err := parsePostID(rawID)
 	if err != nil {
 		return nil, err
@@ -143,7 +145,7 @@ func (s *PostService) Get(ctx context.Context, rawID string) (*model.Post, error
 	return post, err
 }
 
-func (s *PostService) Update(ctx context.Context, rawID string, authorID int, update PostUpdate) (*model.Post, error) {
+func (s *PostServiceImpl) Update(ctx context.Context, rawID string, authorID int, update PostUpdate) (*model.Post, error) {
 	if authorID <= 0 || update.Content == nil {
 		return nil, ErrInvalidInput
 	}
@@ -222,7 +224,7 @@ func (s *PostService) Update(ctx context.Context, rawID string, authorID int, up
 	return nil, ErrConflict
 }
 
-func (s *PostService) Delete(ctx context.Context, rawID string, authorID int) error {
+func (s *PostServiceImpl) Delete(ctx context.Context, rawID string, authorID int) error {
 	if authorID <= 0 {
 		return ErrInvalidInput
 	}
@@ -247,7 +249,7 @@ func (s *PostService) Delete(ctx context.Context, rawID string, authorID int) er
 	}
 }
 
-func (s *PostService) ListByAuthor(ctx context.Context, authorID, limit, offset int) ([]model.Post, error) {
+func (s *PostServiceImpl) ListByAuthor(ctx context.Context, authorID, limit, offset int) ([]model.Post, error) {
 	if authorID <= 0 || limit < 1 || limit > 100 || offset < 0 {
 		return nil, ErrInvalidInput
 	}

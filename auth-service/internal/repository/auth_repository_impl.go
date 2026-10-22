@@ -16,15 +16,15 @@ import (
 var ErrDuplicateEmail = errors.New("email already registered")
 var ErrRefreshTokenMismatch = errors.New("refresh token does not match")
 
-type AuthRepository struct {
+type AuthRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func NewAuthRepository(db *gorm.DB) *AuthRepository {
-	return &AuthRepository{db: db}
+func NewAuthRepository(db *gorm.DB) *AuthRepositoryImpl {
+	return &AuthRepositoryImpl{db: db}
 }
 
-func (r *AuthRepository) GetPermissionsByUserID(userID int) ([]model.Permission, error) {
+func (r *AuthRepositoryImpl) GetPermissionsByUserID(userID int) ([]model.Permission, error) {
 	roleIDs := r.db.
 		Model(&model.UserRole{}).
 		Select("role_id").
@@ -45,7 +45,7 @@ func (r *AuthRepository) GetPermissionsByUserID(userID int) ([]model.Permission,
 	return permissions, nil
 }
 
-func (r *AuthRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+func (r *AuthRepositoryImpl) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
 	if err := r.db.WithContext(ctx).Where("email = ?", email).Take(&user).Error; err != nil {
 		return nil, fmt.Errorf("load auth user: %w", err)
@@ -53,7 +53,7 @@ func (r *AuthRepository) FindByEmail(ctx context.Context, email string) (*model.
 	return &user, nil
 }
 
-func (r *AuthRepository) EmailExists(ctx context.Context, email string) (bool, error) {
+func (r *AuthRepositoryImpl) EmailExists(ctx context.Context, email string) (bool, error) {
 	var user model.User
 	err := r.db.WithContext(ctx).Select("id").Where("email = ?", email).Take(&user).Error
 	if err == nil {
@@ -65,7 +65,7 @@ func (r *AuthRepository) EmailExists(ctx context.Context, email string) (bool, e
 	return false, fmt.Errorf("check registered email: %w", err)
 }
 
-func (r *AuthRepository) CreateWithRole(ctx context.Context, user *model.User, roleName enum.Role) error {
+func (r *AuthRepositoryImpl) CreateWithRole(ctx context.Context, user *model.User, roleName enum.Role) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var role model.Role
 		if err := tx.Where("name = ?", roleName.String()).Take(&role).Error; err != nil {
@@ -85,7 +85,7 @@ func (r *AuthRepository) CreateWithRole(ctx context.Context, user *model.User, r
 	})
 }
 
-func (r *AuthRepository) FindRefreshTokenByEmail(ctx context.Context, email string) (*model.Token, error) {
+func (r *AuthRepositoryImpl) FindRefreshTokenByEmail(ctx context.Context, email string) (*model.Token, error) {
 	var user model.User
 	if err := r.db.WithContext(ctx).Where("email = ?", email).Take(&user).Error; err != nil {
 		return nil, fmt.Errorf("load auth user: %w", err)
@@ -97,7 +97,7 @@ func (r *AuthRepository) FindRefreshTokenByEmail(ctx context.Context, email stri
 	return &token, nil
 }
 
-func (r *AuthRepository) FindRefreshTokenByUserID(ctx context.Context, userID int) (*model.Token, error) {
+func (r *AuthRepositoryImpl) FindRefreshTokenByUserID(ctx context.Context, userID int) (*model.Token, error) {
 	var token model.Token
 	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Take(&token).Error; err != nil {
 		return nil, fmt.Errorf("load refresh token for user %d: %w", userID, err)
@@ -105,7 +105,7 @@ func (r *AuthRepository) FindRefreshTokenByUserID(ctx context.Context, userID in
 	return &token, nil
 }
 
-func (r *AuthRepository) ReplaceRefreshToken(ctx context.Context, userID int, secret string) error {
+func (r *AuthRepositoryImpl) ReplaceRefreshToken(ctx context.Context, userID int, secret string) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user model.User
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").Take(&user, userID).Error; err != nil {
@@ -130,7 +130,7 @@ func (r *AuthRepository) ReplaceRefreshToken(ctx context.Context, userID int, se
 	})
 }
 
-func (r *AuthRepository) RotateRefreshToken(ctx context.Context, userID int, currentSecret, newSecret string) error {
+func (r *AuthRepositoryImpl) RotateRefreshToken(ctx context.Context, userID int, currentSecret, newSecret string) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user model.User
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").Take(&user, userID).Error; err != nil {
@@ -160,26 +160,28 @@ func (r *AuthRepository) RotateRefreshToken(ctx context.Context, userID int, cur
 	})
 }
 
-func (r *AuthRepository) DeleteRefreshTokenByUserID(ctx context.Context, userID int) (bool, error) {
+func (r *AuthRepositoryImpl) DeleteRefreshTokenByUserID(ctx context.Context, userID int) (bool, error) {
 	token := model.Token{}
-	if result := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&token); result.Error != nil {
+	result := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&token)
+	if result.Error != nil {
 		return false, fmt.Errorf("delete refresh token for user %d: %w", userID, result.Error)
 	}
 
-	if r.db.RowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return false, nil
 	}
 
 	return true, nil
 }
 
-func (r *AuthRepository) DeleteRefreshTokenByCurrentToken(ctx context.Context, userID int, currentToken string) (bool, error) {
+func (r *AuthRepositoryImpl) DeleteRefreshTokenByCurrentToken(ctx context.Context, userID int, currentToken string) (bool, error) {
 	token := model.Token{}
-	if result := r.db.WithContext(ctx).Where("refresh_token = ? AND user_id = ?", currentToken, userID).Delete(&token); result.Error != nil {
+	result := r.db.WithContext(ctx).Where("refresh_token = ? AND user_id = ?", currentToken, userID).Delete(&token)
+	if result.Error != nil {
 		return false, fmt.Errorf("delete refresh token for user %d: %w", userID, result.Error)
 	}
 
-	if r.db.RowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return false, nil
 	}
 

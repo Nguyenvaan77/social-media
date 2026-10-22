@@ -13,7 +13,7 @@ import (
 )
 
 type UserHandler struct {
-	s *service.UserService
+	s service.UserService
 }
 
 type createUserRequest struct {
@@ -37,7 +37,7 @@ type publicUser struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func NewUserHandler(userService *service.UserService) *UserHandler {
+func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{s: userService}
 }
 

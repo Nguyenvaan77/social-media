@@ -14,12 +14,12 @@ import (
 )
 
 type MediaHandler struct {
-	s            *service.MediaService
+	s            service.MediaService
 	verifier     *auth.Verifier
 	maxFileBytes int64
 }
 
-func NewMediaHandler(mediaService *service.MediaService, verifier *auth.Verifier, maxFileBytes int64) *MediaHandler {
+func NewMediaHandler(mediaService service.MediaService, verifier *auth.Verifier, maxFileBytes int64) *MediaHandler {
 	return &MediaHandler{s: mediaService, verifier: verifier, maxFileBytes: maxFileBytes}
 }
 

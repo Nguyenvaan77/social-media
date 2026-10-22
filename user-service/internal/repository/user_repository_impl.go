@@ -10,15 +10,17 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type UserRepository struct {
+type UserRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db: db}
+var _ UserRepository = (*UserRepositoryImpl)(nil)
+
+func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
+	return &UserRepositoryImpl{db: db}
 }
 
-func (r *UserRepository) CreateUser(user *model.User) error {
+func (r *UserRepositoryImpl) CreateUser(user *model.User) error {
 	if user == nil {
 		return errors.New("create user: user is nil")
 	}
@@ -28,7 +30,7 @@ func (r *UserRepository) CreateUser(user *model.User) error {
 	return nil
 }
 
-func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
+func (r *UserRepositoryImpl) FindByEmail(email string) (*model.User, error) {
 	var user model.User
 	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, fmt.Errorf("find user by email: %w", err)
@@ -36,7 +38,7 @@ func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) FindByID(id int) (*model.User, error) {
+func (r *UserRepositoryImpl) FindByID(id int) (*model.User, error) {
 	var user model.User
 	if err := r.db.Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, fmt.Errorf("find user by ID %d: %w", id, err)
@@ -45,11 +47,11 @@ func (r *UserRepository) FindByID(id int) (*model.User, error) {
 }
 
 // FindById retains the older spelling for existing callers.
-func (r *UserRepository) FindById(id int) (*model.User, error) {
+func (r *UserRepositoryImpl) FindById(id int) (*model.User, error) {
 	return r.FindByID(id)
 }
 
-func (r *UserRepository) FindAll() ([]model.User, error) {
+func (r *UserRepositoryImpl) FindAll() ([]model.User, error) {
 	var users []model.User
 	if err := r.db.Order("id ASC").Find(&users).Error; err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
@@ -57,7 +59,7 @@ func (r *UserRepository) FindAll() ([]model.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) UpdateUser(id int, updates map[string]interface{}) (*model.User, error) {
+func (r *UserRepositoryImpl) UpdateUser(id int, updates map[string]interface{}) (*model.User, error) {
 	if len(updates) == 0 {
 		return nil, errors.New("update user: no fields provided")
 	}
@@ -79,7 +81,7 @@ func (r *UserRepository) UpdateUser(id int, updates map[string]interface{}) (*mo
 }
 
 // Follow returns true only when a new follow relationship was inserted.
-func (r *UserRepository) Follow(followerID, followeeID int) (bool, error) {
+func (r *UserRepositoryImpl) Follow(followerID, followeeID int) (bool, error) {
 	if followerID <= 0 || followeeID <= 0 || followerID == followeeID {
 		return false, errors.New("follow: invalid user IDs")
 	}
@@ -92,7 +94,7 @@ func (r *UserRepository) Follow(followerID, followeeID int) (bool, error) {
 }
 
 // Unfollow returns true only when a follow relationship was removed.
-func (r *UserRepository) Unfollow(followerID, followeeID int) (bool, error) {
+func (r *UserRepositoryImpl) Unfollow(followerID, followeeID int) (bool, error) {
 	result := r.db.Where("follower_id = ? AND followee_id = ?", followerID, followeeID).Delete(&model.Follow{})
 	if result.Error != nil {
 		return false, fmt.Errorf("unfollow user %d: %w", followeeID, result.Error)
@@ -100,7 +102,7 @@ func (r *UserRepository) Unfollow(followerID, followeeID int) (bool, error) {
 	return result.RowsAffected > 0, nil
 }
 
-func (r *UserRepository) IsFollowing(followerID, followeeID int) (bool, error) {
+func (r *UserRepositoryImpl) IsFollowing(followerID, followeeID int) (bool, error) {
 	var count int64
 	if err := r.db.Model(&model.Follow{}).
 		Where("follower_id = ? AND followee_id = ?", followerID, followeeID).
@@ -110,7 +112,7 @@ func (r *UserRepository) IsFollowing(followerID, followeeID int) (bool, error) {
 	return count > 0, nil
 }
 
-func (r *UserRepository) ListFollowing(userID, limit, offset int) ([]model.User, error) {
+func (r *UserRepositoryImpl) ListFollowing(userID, limit, offset int) ([]model.User, error) {
 	limit, offset = normalizedPage(limit, offset)
 	var users []model.User
 	err := r.db.Model(&model.User{}).
@@ -125,7 +127,7 @@ func (r *UserRepository) ListFollowing(userID, limit, offset int) ([]model.User,
 	return users, nil
 }
 
-func (r *UserRepository) ListFollowers(userID, limit, offset int) ([]model.User, error) {
+func (r *UserRepositoryImpl) ListFollowers(userID, limit, offset int) ([]model.User, error) {
 	limit, offset = normalizedPage(limit, offset)
 	var users []model.User
 	err := r.db.Model(&model.User{}).

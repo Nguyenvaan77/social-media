@@ -8,15 +8,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type MediaRepository struct {
+type MediaRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func NewMediaRepository(db *gorm.DB) *MediaRepository {
-	return &MediaRepository{db: db}
+var _ MediaRepository = (*MediaRepositoryImpl)(nil)
+
+func NewMediaRepository(db *gorm.DB) *MediaRepositoryImpl {
+	return &MediaRepositoryImpl{db: db}
 }
 
-func (r *MediaRepository) CreateMany(records []model.Media) error {
+func (r *MediaRepositoryImpl) CreateMany(records []model.Media) error {
 	if len(records) == 0 {
 		return nil
 	}
@@ -26,7 +28,7 @@ func (r *MediaRepository) CreateMany(records []model.Media) error {
 	return nil
 }
 
-func (r *MediaRepository) FindByID(id string) (*model.Media, error) {
+func (r *MediaRepositoryImpl) FindByID(id string) (*model.Media, error) {
 	var media model.Media
 	if err := r.db.Where("id = ?", id).First(&media).Error; err != nil {
 		return nil, fmt.Errorf("find media %s: %w", id, err)
@@ -34,7 +36,7 @@ func (r *MediaRepository) FindByID(id string) (*model.Media, error) {
 	return &media, nil
 }
 
-func (r *MediaRepository) SoftDeleteOwned(id string, userID int) error {
+func (r *MediaRepositoryImpl) SoftDeleteOwned(id string, userID int) error {
 	result := r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Media{})
 	if result.Error != nil {
 		return fmt.Errorf("delete media %s: %w", id, result.Error)

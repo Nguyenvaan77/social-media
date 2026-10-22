@@ -36,14 +36,16 @@ type UploadFile struct {
 	Data     []byte
 }
 
-type MediaService struct {
-	r            *repository.MediaRepository
+type MediaServiceImpl struct {
+	r            repository.MediaRepository
 	storage      *storage.Local
 	maxFileBytes int64
 }
 
-func NewMediaService(mediaRepository *repository.MediaRepository, fileStorage *storage.Local, maxFileBytes int64) *MediaService {
-	return &MediaService{r: mediaRepository, storage: fileStorage, maxFileBytes: maxFileBytes}
+var _ MediaService = (*MediaServiceImpl)(nil)
+
+func NewMediaService(mediaRepository repository.MediaRepository, fileStorage *storage.Local, maxFileBytes int64) *MediaServiceImpl {
+	return &MediaServiceImpl{r: mediaRepository, storage: fileStorage, maxFileBytes: maxFileBytes}
 }
 
 func imageType(data []byte) (string, string, error) {
@@ -93,7 +95,7 @@ func safeFilename(original string) string {
 	return builder.String()
 }
 
-func (s *MediaService) Upload(userID int, files []UploadFile) ([]model.Media, error) {
+func (s *MediaServiceImpl) Upload(userID int, files []UploadFile) ([]model.Media, error) {
 	if userID <= 0 || len(files) == 0 || len(files) > MaxFiles || s.maxFileBytes <= 0 {
 		return nil, ErrInvalidInput
 	}
@@ -138,7 +140,7 @@ func (s *MediaService) Upload(userID int, files []UploadFile) ([]model.Media, er
 	return records, nil
 }
 
-func (s *MediaService) Get(id string) (*model.Media, error) {
+func (s *MediaServiceImpl) Get(id string) (*model.Media, error) {
 	if _, err := uuid.Parse(id); err != nil {
 		return nil, ErrInvalidInput
 	}
@@ -149,7 +151,7 @@ func (s *MediaService) Get(id string) (*model.Media, error) {
 	return media, err
 }
 
-func (s *MediaService) Delete(id string, userID int) error {
+func (s *MediaServiceImpl) Delete(id string, userID int) error {
 	if userID <= 0 {
 		return ErrInvalidInput
 	}
@@ -170,6 +172,6 @@ func (s *MediaService) Delete(id string, userID int) error {
 	return nil
 }
 
-func (s *MediaService) OpenFile(key string) (*os.File, error) {
+func (s *MediaServiceImpl) OpenFile(key string) (*os.File, error) {
 	return s.storage.Open(key)
 }
