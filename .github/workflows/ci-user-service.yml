@@ -1,0 +1,86 @@
+
+name: CI - User Service
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "user-service/**"
+      - ".github/workflows/ci-user-service.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "user-service/**"
+      - ".github/workflows/ci-user-service.yml"
+
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/user-service
+
+jobs:
+  test:
+    name: Test User Service
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: user-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: user-service/go.mod
+          cache: true
+          cache-dependency-path: user-service/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race ./...
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+
+    # PR chỉ kiểm tra khả năng build, không push image.
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set lowercase image name
+        id: image
+        run: |
+          echo "name=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./user-service
+          file: ./user-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
