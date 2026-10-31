@@ -7,7 +7,7 @@ import (
 
 	"auth/internal/model"
 
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -16,7 +16,7 @@ func ConnectDatabase() (*gorm.DB, error) {
 	if dsn == "" {
 		return nil, errors.New("DATABASE_DSN is required")
 	}
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{TranslateError: true})
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{TranslateError: true})
 }
 
 func MigrateDatabase(db *gorm.DB) error {
